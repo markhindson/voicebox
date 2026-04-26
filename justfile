@@ -73,7 +73,7 @@ setup-python:
     Write-Host "Detected GPUs: $($gpus -join ', ')"
     $hasNvidia = ($gpus | Where-Object { $_ -match 'NVIDIA' }).Count -gt 0
     $hasIntelArc = ($gpus | Where-Object { $_ -match 'Arc' }).Count -gt 0
-    $isArm64 = $env:PROCESSOR_ARCHITECTURE -eq "ARM64"
+    $isArm64 = [System.Environment]::GetEnvironmentVariable("PROCESSOR_ARCHITECTURE", "Machine") -eq "ARM64"
     $hasQualcomm = ($gpus | Where-Object { $_ -match 'Qualcomm|Adreno' }).Count -gt 0
     if ($hasNvidia) { \
         Write-Host "NVIDIA GPU detected — installing PyTorch with CUDA support..."; \
