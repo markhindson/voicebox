@@ -402,6 +402,18 @@ def build_server(cuda=False):
     elif not cuda:
         logger.info("Building for non-Apple Silicon platform - PyTorch only")
 
+    # ARM64 Windows: include torch_directml, exclude torchaudio (no arm64 wheels)
+    if platform.system() == "Windows" and platform.machine() == "ARM64" and not cuda:
+        logger.info("Building for ARM64 Windows - including torch_directml, excluding torchaudio")
+        args.extend(
+            [
+                "--hidden-import",
+                "torch_directml",
+            ]
+        )
+        # Remove torchaudio hidden import since it has no arm64 Windows wheels
+        args = [a for i, a in enumerate(args) if not (a == "torchaudio" and i > 0 and args[i - 1] == "--hidden-import")]
+
     dist_dir = str(backend_dir / "dist")
     build_dir = str(backend_dir / "build")
 
@@ -424,7 +436,7 @@ def build_server(cuda=False):
     # then restore CUDA torch after. This prevents PyInstaller from bundling
     # ~3GB of CUDA DLLs into the CPU binary.
     restore_cuda = False
-    if not cuda and platform.system() == "Windows":
+    if not cuda and platform.system() == "Windows" and platform.machine() != "ARM64":
         import subprocess
 
         result = subprocess.run(

@@ -73,7 +73,7 @@ setup-python:
     Write-Host "Detected GPUs: $($gpus -join ', ')"
     $hasNvidia = ($gpus | Where-Object { $_ -match 'NVIDIA' }).Count -gt 0
     $hasIntelArc = ($gpus | Where-Object { $_ -match 'Arc' }).Count -gt 0
-    $isArm64 = [System.Environment]::GetEnvironmentVariable("PROCESSOR_ARCHITECTURE", "Machine") -eq "ARM64"
+    $isArm64 = (& "{{ python }}" -c "import platform; print(platform.machine())").Trim() -eq "ARM64"
     $hasQualcomm = ($gpus | Where-Object { $_ -match 'Qualcomm|Adreno' }).Count -gt 0
     if ($hasNvidia) { \
         Write-Host "NVIDIA GPU detected — installing PyTorch with CUDA support..."; \
@@ -84,7 +84,7 @@ setup-python:
         & "{{ pip }}" install intel-extension-for-pytorch --index-url https://download.pytorch.org/whl/xpu; \
     } elseif ($isArm64 -or $hasQualcomm) { \
         Write-Host "ARM64 Windows (Snapdragon) detected — installing PyTorch + DirectML..."; \
-        & "{{ pip }}" install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; \
+        & "{{ pip }}" install torch torchvision --index-url https://download.pytorch.org/whl/cpu; \
         & "{{ pip }}" install torch-directml; \
     } else { \
         Write-Host "No NVIDIA or Intel Arc GPU detected — using CPU-only PyTorch."; \
@@ -92,7 +92,12 @@ setup-python:
         Write-Host "  pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/xpu"; \
         Write-Host "  pip install intel-extension-for-pytorch --index-url https://download.pytorch.org/whl/xpu"; \
     }
-    & "{{ pip }}" install -r {{ backend_dir }}/requirements.txt
+    if ($isArm64) { \
+        $filtered = Get-Content {{ backend_dir }}/requirements.txt | Where-Object { $_ -ne 'torchaudio' }; \
+        $filtered | & "{{ pip }}" install -r -; \
+    } else { \
+        & "{{ pip }}" install -r {{ backend_dir }}/requirements.txt; \
+    }
     & "{{ pip }}" install --no-deps chatterbox-tts
     & "{{ pip }}" install --no-deps hume-tada
     & "{{ pip }}" install git+https://github.com/QwenLM/Qwen3-TTS.git
