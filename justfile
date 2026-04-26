@@ -73,6 +73,8 @@ setup-python:
     Write-Host "Detected GPUs: $($gpus -join ', ')"
     $hasNvidia = ($gpus | Where-Object { $_ -match 'NVIDIA' }).Count -gt 0
     $hasIntelArc = ($gpus | Where-Object { $_ -match 'Arc' }).Count -gt 0
+    $isArm64 = $env:PROCESSOR_ARCHITECTURE -eq "ARM64"
+    $hasQualcomm = ($gpus | Where-Object { $_ -match 'Qualcomm|Adreno' }).Count -gt 0
     if ($hasNvidia) { \
         Write-Host "NVIDIA GPU detected — installing PyTorch with CUDA support..."; \
         & "{{ pip }}" install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128; \
@@ -80,6 +82,10 @@ setup-python:
         Write-Host "Intel Arc GPU detected — installing PyTorch with XPU support..."; \
         & "{{ pip }}" install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/xpu; \
         & "{{ pip }}" install intel-extension-for-pytorch --index-url https://download.pytorch.org/whl/xpu; \
+    } elseif ($isArm64 -or $hasQualcomm) { \
+        Write-Host "ARM64 Windows (Snapdragon) detected — installing PyTorch + DirectML..."; \
+        & "{{ pip }}" install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; \
+        & "{{ pip }}" install torch-directml; \
     } else { \
         Write-Host "No NVIDIA or Intel Arc GPU detected — using CPU-only PyTorch."; \
         Write-Host "If you have an Intel Arc GPU, install XPU support manually:"; \
