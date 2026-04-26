@@ -73,7 +73,7 @@ setup-python:
     if ($isArm64) { \
         Write-Host "ARM64 Windows detected — installing PyTorch (CPU-only, no torchaudio wheels yet)..."; \
         & "{{ pip }}" install torch torchvision --index-url https://download.pytorch.org/whl/cpu; \
-        $filtered = (Get-Content {{ backend_dir }}/requirements.txt | Where-Object { $_ -ne 'torchaudio' }) -join "`n"; \
+        $filtered = (Get-Content {{ backend_dir }}/requirements.txt | Where-Object { $_ -ne 'torchaudio' -and $_ -notmatch '^numpy' }) -join "`n"; \
         Set-Content -Path "$env:TEMP\voicebox-reqs.txt" -Value $filtered; \
         & "{{ pip }}" install -r "$env:TEMP\voicebox-reqs.txt"; \
         Remove-Item "$env:TEMP\voicebox-reqs.txt"; \
