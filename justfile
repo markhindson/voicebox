@@ -71,11 +71,12 @@ setup-python:
     & "{{ python }}" -m pip install --upgrade pip -q; \
     $isArm64 = (& "{{ python }}" -c "import platform; print(platform.machine())").Trim() -eq "ARM64"; \
     if ($isArm64) { \
-        Write-Host "ARM64 Windows detected — installing PyTorch + DirectML..."; \
+        Write-Host "ARM64 Windows detected — installing PyTorch (CPU-only, no torchaudio wheels yet)..."; \
         & "{{ pip }}" install torch torchvision --index-url https://download.pytorch.org/whl/cpu; \
-        & "{{ pip }}" install torch-directml; \
-        $filtered = Get-Content {{ backend_dir }}/requirements.txt | Where-Object { $_ -ne 'torchaudio' }; \
-        $filtered | & "{{ pip }}" install -r -; \
+        $filtered = (Get-Content {{ backend_dir }}/requirements.txt | Where-Object { $_ -ne 'torchaudio' }) -join "`n"; \
+        Set-Content -Path "$env:TEMP\voicebox-reqs.txt" -Value $filtered; \
+        & "{{ pip }}" install -r "$env:TEMP\voicebox-reqs.txt"; \
+        Remove-Item "$env:TEMP\voicebox-reqs.txt"; \
     } else { \
         $gpus = Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name; \
         Write-Host "Detected GPUs: $($gpus -join ', ')"; \
@@ -98,7 +99,11 @@ setup-python:
     }; \
     & "{{ pip }}" install --no-deps chatterbox-tts; \
     & "{{ pip }}" install --no-deps hume-tada; \
-    & "{{ pip }}" install git+https://github.com/QwenLM/Qwen3-TTS.git; \
+    if ($isArm64) { \
+        & "{{ pip }}" install --no-deps git+https://github.com/QwenLM/Qwen3-TTS.git; \
+    } else { \
+        & "{{ pip }}" install git+https://github.com/QwenLM/Qwen3-TTS.git; \
+    }; \
     & "{{ pip }}" install pyinstaller ruff pytest pytest-asyncio -q; \
     Write-Host "Python environment ready."
 
