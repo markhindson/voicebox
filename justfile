@@ -71,12 +71,9 @@ setup-python:
     & "{{ python }}" -m pip install --upgrade pip -q; \
     $isArm64 = (& "{{ python }}" -c "import platform; print(platform.machine())").Trim() -eq "ARM64"; \
     if ($isArm64) { \
-        Write-Host "ARM64 Windows detected — installing PyTorch (CPU-only, no torchaudio wheels yet)..."; \
+        Write-Host "ARM64 Windows detected — installing PyTorch (CPU-only, no torchaudio/DirectML arm64 wheels yet)..."; \
         & "{{ pip }}" install torch torchvision --index-url https://download.pytorch.org/whl/cpu; \
-        $filtered = (Get-Content {{ backend_dir }}/requirements.txt | Where-Object { $_ -ne 'torchaudio' -and $_ -notmatch '^numpy' -and $_ -notmatch '^numba' }) -join "`n"; \
-        Set-Content -Path "$env:TEMP\voicebox-reqs.txt" -Value $filtered; \
-        & "{{ pip }}" install -r "$env:TEMP\voicebox-reqs.txt"; \
-        Remove-Item "$env:TEMP\voicebox-reqs.txt"; \
+        & "{{ pip }}" install -r {{ backend_dir }}/requirements-arm64.txt; \
     } else { \
         $gpus = Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name; \
         Write-Host "Detected GPUs: $($gpus -join ', ')"; \
